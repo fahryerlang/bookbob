@@ -1,0 +1,36 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use Illuminate\Http\Request;
+
+class UserController extends Controller
+{
+    public function index(Request $request)
+    {
+        $query = User::where('role', 'user');
+
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->withCount('orders')->latest()->paginate(10);
+
+        return view('admin.users.index', compact('users'));
+    }
+
+    public function show(User $user)
+    {
+        $user->load(['orders' => function($query) {
+            $query->latest()->take(10);
+        }]);
+        
+        return view('admin.users.show', compact('user'));
+    }
+}
