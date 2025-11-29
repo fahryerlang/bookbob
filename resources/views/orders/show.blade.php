@@ -178,6 +178,35 @@
                                     <span class="text-gray-400">×</span>
                                     <span class="px-2 py-0.5 bg-gray-100 rounded text-gray-600 font-medium">{{ $item->quantity }}</span>
                                 </div>
+                                
+                                @if($order->status === 'completed')
+                                    @php
+                                        $existingReview = $order->reviews()->where('book_id', $item->book_id)->first();
+                                    @endphp
+                                    <div class="mt-3">
+                                        @if($existingReview)
+                                            <div class="flex items-center gap-2">
+                                                <div class="flex text-amber-400 text-sm">
+                                                    @for($i = 1; $i <= 5; $i++)
+                                                        <span>{{ $i <= $existingReview->rating ? '★' : '☆' }}</span>
+                                                    @endfor
+                                                </div>
+                                                <a href="{{ route('reviews.create', [$order, $item->book]) }}" 
+                                                   class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                                                    Edit Ulasan
+                                                </a>
+                                            </div>
+                                        @else
+                                            <a href="{{ route('reviews.create', [$order, $item->book]) }}" 
+                                               class="inline-flex items-center px-3 py-1.5 bg-amber-100 text-amber-700 text-sm font-medium rounded-lg hover:bg-amber-200 transition">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                                                </svg>
+                                                Tulis Ulasan
+                                            </a>
+                                        @endif
+                                    </div>
+                                @endif
                             </div>
                             
                             <div class="text-right">
@@ -273,8 +302,22 @@
                                 </svg>
                                 Subtotal
                             </span>
-                            <span class="text-gray-800 font-medium">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                            <span class="text-gray-800 font-medium">Rp {{ number_format($order->subtotal ?? $order->total_amount, 0, ',', '.') }}</span>
                         </div>
+                        @if($order->discount_amount > 0)
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-500 flex items-center text-sm">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"></path>
+                                    </svg>
+                                    Diskon
+                                    @if($order->coupon)
+                                        <span class="ml-1 px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded font-mono">{{ $order->coupon->code }}</span>
+                                    @endif
+                                </span>
+                                <span class="text-green-600 font-medium">- Rp {{ number_format($order->discount_amount, 0, ',', '.') }}</span>
+                            </div>
+                        @endif
                         <div class="flex justify-between items-center">
                             <span class="text-gray-500 flex items-center text-sm">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

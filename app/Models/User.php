@@ -122,4 +122,70 @@ class User extends Authenticatable
     {
         return $this->wallet ?? $this->wallet()->create(['balance' => 0]);
     }
+
+    /**
+     * Get the wishlists for the user.
+     */
+    public function wishlists(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    /**
+     * Get the wishlist books for the user.
+     */
+    public function wishlistBooks()
+    {
+        return $this->belongsToMany(Book::class, 'wishlists')
+            ->withPivot('price_when_added', 'notified_at')
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if a book is in user's wishlist.
+     */
+    public function hasInWishlist($bookId): bool
+    {
+        return $this->wishlists()->where('book_id', $bookId)->exists();
+    }
+
+    /**
+     * Get wishlist count.
+     */
+    public function getWishlistCountAttribute(): int
+    {
+        return $this->wishlists()->count();
+    }
+
+    /**
+     * Get the reviews written by the user.
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    /**
+     * Check if user has reviewed a book for a specific order.
+     */
+    public function hasReviewedBook($bookId, $orderId): bool
+    {
+        return $this->reviews()
+            ->where('book_id', $bookId)
+            ->where('order_id', $orderId)
+            ->exists();
+    }
+
+    /**
+     * Check if user can review a book (has completed order with this book).
+     */
+    public function canReviewBook($bookId): bool
+    {
+        return $this->orders()
+            ->where('status', 'completed')
+            ->whereHas('orderItems', function ($query) use ($bookId) {
+                $query->where('book_id', $bookId);
+            })
+            ->exists();
+    }
 }

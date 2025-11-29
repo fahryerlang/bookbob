@@ -26,7 +26,7 @@
 
                         <div class="divide-y">
                             @foreach($cartItems as $item)
-                                <div class="p-4 flex items-center space-x-4">
+                                <div class="p-4 flex items-center space-x-4 cart-item" data-item-id="{{ $item->id }}" data-price="{{ $item->book->price }}">
                                     <!-- Book Image -->
                                     <div class="w-20 h-28 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                                         @if($item->book->cover_image)
@@ -51,43 +51,35 @@
 
                                     <!-- Quantity -->
                                     <div class="flex items-center">
-                                        <form action="{{ route('cart.update', $item) }}" method="POST" class="flex items-center" id="qty-form-{{ $item->id }}">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="button" onclick="decreaseQty({{ $item->id }}, {{ $item->book->stock }})" 
-                                                class="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 transition text-gray-600 hover:text-gray-800">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                                                </svg>
-                                            </button>
-                                            <input type="text" name="quantity" id="qty-{{ $item->id }}" value="{{ $item->quantity }}" 
-                                                data-max="{{ $item->book->stock }}"
-                                                onchange="submitQty({{ $item->id }})"
-                                                class="w-14 h-9 text-center border-t border-b border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium [appearance:textfield]">
-                                            <button type="button" onclick="increaseQty({{ $item->id }}, {{ $item->book->stock }})" 
-                                                class="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 transition text-gray-600 hover:text-gray-800">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                                </svg>
-                                            </button>
-                                        </form>
+                                        <button type="button" onclick="updateQty({{ $item->id }}, -1, {{ $item->book->stock }})" 
+                                            class="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-l-lg bg-gray-50 hover:bg-gray-100 transition text-gray-600 hover:text-gray-800">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                                            </svg>
+                                        </button>
+                                        <input type="text" id="qty-{{ $item->id }}" value="{{ $item->quantity }}" 
+                                            data-max="{{ $item->book->stock }}"
+                                            onchange="updateQtyDirect({{ $item->id }}, this.value, {{ $item->book->stock }})"
+                                            class="w-14 h-9 text-center border-t border-b border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium [appearance:textfield]">
+                                        <button type="button" onclick="updateQty({{ $item->id }}, 1, {{ $item->book->stock }})" 
+                                            class="w-9 h-9 flex items-center justify-center border border-gray-300 rounded-r-lg bg-gray-50 hover:bg-gray-100 transition text-gray-600 hover:text-gray-800">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                            </svg>
+                                        </button>
                                     </div>
 
                                     <!-- Subtotal -->
                                     <div class="text-right">
-                                        <p class="font-bold text-gray-800">Rp {{ number_format($item->quantity * $item->book->price, 0, ',', '.') }}</p>
+                                        <p class="font-bold text-gray-800 subtotal" id="subtotal-{{ $item->id }}">Rp {{ number_format($item->quantity * $item->book->price, 0, ',', '.') }}</p>
                                     </div>
 
                                     <!-- Remove -->
-                                    <form action="{{ route('cart.remove', $item) }}" method="POST">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-500 hover:text-red-600 p-2">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                            </svg>
-                                        </button>
-                                    </form>
+                                    <button type="button" onclick="removeItem({{ $item->id }})" class="text-red-500 hover:text-red-600 p-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
                                 </div>
                             @endforeach
                         </div>
@@ -101,8 +93,8 @@
                         
                         <div class="space-y-3 mb-6">
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Subtotal ({{ $cartItems->sum('quantity') }} item)</span>
-                                <span class="text-gray-800">Rp {{ number_format($total, 0, ',', '.') }}</span>
+                                <span class="text-gray-600">Subtotal (<span id="total-items">{{ $cartItems->sum('quantity') }}</span> item)</span>
+                                <span class="text-gray-800" id="subtotal-display">Rp {{ number_format($total, 0, ',', '.') }}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Ongkos Kirim</span>
@@ -111,7 +103,7 @@
                             <hr>
                             <div class="flex justify-between text-lg font-bold">
                                 <span class="text-gray-800">Total</span>
-                                <span class="text-indigo-600">Rp {{ number_format($total, 0, ',', '.') }}</span>
+                                <span class="text-indigo-600" id="total-display">Rp {{ number_format($total, 0, ',', '.') }}</span>
                             </div>
                         </div>
 
@@ -141,36 +133,109 @@
 
 @push('scripts')
 <script>
-    function decreaseQty(itemId, maxStock) {
+    const csrfToken = '{{ csrf_token() }}';
+
+    function formatRupiah(number) {
+        return 'Rp ' + number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function updateQty(itemId, change, maxStock) {
         const input = document.getElementById('qty-' + itemId);
         let value = parseInt(input.value) || 1;
-        if (value > 1) {
-            input.value = value - 1;
-            submitQty(itemId);
+        let newValue = value + change;
+        
+        if (newValue < 1) newValue = 1;
+        if (newValue > maxStock) newValue = maxStock;
+        
+        if (newValue !== value) {
+            input.value = newValue;
+            saveQuantity(itemId, newValue);
         }
     }
 
-    function increaseQty(itemId, maxStock) {
+    function updateQtyDirect(itemId, value, maxStock) {
+        let newValue = parseInt(value) || 1;
+        
+        if (newValue < 1) newValue = 1;
+        if (newValue > maxStock) newValue = maxStock;
+        
         const input = document.getElementById('qty-' + itemId);
-        let value = parseInt(input.value) || 1;
-        if (value < maxStock) {
-            input.value = value + 1;
-            submitQty(itemId);
-        }
+        input.value = newValue;
+        saveQuantity(itemId, newValue);
     }
 
-    function submitQty(itemId) {
-        const form = document.getElementById('qty-form-' + itemId);
-        const input = document.getElementById('qty-' + itemId);
-        let value = parseInt(input.value) || 1;
+    function saveQuantity(itemId, quantity) {
+        fetch(`/cart/${itemId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ quantity: quantity })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update subtotal for this item
+                const cartItem = document.querySelector(`.cart-item[data-item-id="${itemId}"]`);
+                const price = parseFloat(cartItem.dataset.price);
+                const subtotal = price * quantity;
+                document.getElementById('subtotal-' + itemId).textContent = formatRupiah(subtotal);
+                
+                // Update totals
+                updateTotals();
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function removeItem(itemId) {
+        if (!confirm('Hapus item ini dari keranjang?')) return;
         
-        // Validate min/max
-        const max = parseInt(input.getAttribute('max'));
-        if (value < 1) value = 1;
-        if (value > max) value = max;
-        input.value = value;
+        fetch(`/cart/${itemId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove item from DOM
+                const cartItem = document.querySelector(`.cart-item[data-item-id="${itemId}"]`);
+                cartItem.remove();
+                
+                // Check if cart is empty
+                const remainingItems = document.querySelectorAll('.cart-item');
+                if (remainingItems.length === 0) {
+                    location.reload();
+                } else {
+                    updateTotals();
+                }
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function updateTotals() {
+        let totalItems = 0;
+        let totalAmount = 0;
         
-        form.submit();
+        document.querySelectorAll('.cart-item').forEach(item => {
+            const itemId = item.dataset.itemId;
+            const price = parseFloat(item.dataset.price);
+            const qty = parseInt(document.getElementById('qty-' + itemId).value) || 0;
+            
+            totalItems += qty;
+            totalAmount += price * qty;
+        });
+        
+        document.getElementById('total-items').textContent = totalItems;
+        document.getElementById('subtotal-display').textContent = formatRupiah(totalAmount);
+        document.getElementById('total-display').textContent = formatRupiah(totalAmount);
     }
 </script>
 @endpush

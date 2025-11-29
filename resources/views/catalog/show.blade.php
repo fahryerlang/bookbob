@@ -36,11 +36,91 @@
                     {{ $book->category->name }}
                 </span>
                 
-                <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ $book->title }}</h1>
-                <p class="text-xl text-gray-600 mb-4">oleh {{ $book->author }}</p>
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ $book->title }}</h1>
+                        <p class="text-xl text-gray-600 mb-2">oleh {{ $book->author }}</p>
+                        
+                        <!-- Rating Summary -->
+                        @if($book->review_count > 0)
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="flex text-amber-400 text-lg">
+                                    @for($i = 1; $i <= 5; $i++)
+                                        @if($i <= round($book->average_rating))
+                                            <span>★</span>
+                                        @else
+                                            <span class="text-gray-300">★</span>
+                                        @endif
+                                    @endfor
+                                </div>
+                                <span class="text-gray-600 font-medium">{{ number_format($book->average_rating, 1) }}</span>
+                                <a href="#reviews" class="text-sm text-indigo-600 hover:text-indigo-700">({{ $book->review_count }} ulasan)</a>
+                            </div>
+                        @else
+                            <p class="text-sm text-gray-500 mb-2">Belum ada ulasan</p>
+                        @endif
+                    </div>
+                    
+                    <!-- Wishlist Button -->
+                    @auth
+                        <button type="button" 
+                            onclick="toggleWishlist({{ $book->id }}, this)"
+                            class="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center hover:bg-red-50 transition-all group wishlist-btn"
+                            data-in-wishlist="{{ auth()->user()->hasInWishlist($book->id) ? 'true' : 'false' }}"
+                            title="{{ auth()->user()->hasInWishlist($book->id) ? 'Hapus dari Wishlist' : 'Tambah ke Wishlist' }}">
+                            <svg class="w-6 h-6 transition-colors {{ auth()->user()->hasInWishlist($book->id) ? 'text-red-500 fill-current' : 'text-gray-400 group-hover:text-red-400' }}" 
+                                 fill="{{ auth()->user()->hasInWishlist($book->id) ? 'currentColor' : 'none' }}" 
+                                 stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                            </svg>
+                        </button>
+                    @else
+                        <a href="{{ route('login') }}"
+                            class="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center hover:bg-red-50 transition-all group"
+                            title="Login untuk menambahkan ke wishlist">
+                            <svg class="w-6 h-6 text-gray-400 group-hover:text-red-400 transition-colors" 
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                            </svg>
+                        </a>
+                    @endauth
+                </div>
 
                 <div class="flex items-center space-x-4 mb-6">
-                    <span class="text-3xl font-bold text-indigo-600">Rp {{ number_format($book->price, 0, ',', '.') }}</span>
+                    @php
+                        $activePromo = $book->getActivePromo();
+                        $discountedPrice = $book->getDiscountedPrice();
+                        $isOnSale = $book->isOnSale();
+                    @endphp
+                    
+                    @if($isOnSale && $activePromo)
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-3xl font-bold text-indigo-600">Rp {{ number_format($discountedPrice, 0, ',', '.') }}</span>
+                                <span class="text-lg text-gray-400 line-through">Rp {{ number_format($book->price, 0, ',', '.') }}</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded">
+                                    @if($activePromo->discount_type === 'percentage')
+                                        -{{ (int)$activePromo->discount_value }}%
+                                    @else
+                                        -Rp {{ number_format($activePromo->discount_value, 0, ',', '.') }}
+                                    @endif
+                                </span>
+                                @if($activePromo->type === 'flash_sale')
+                                    <span class="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded flex items-center">
+                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        Flash Sale
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    @else
+                        <span class="text-3xl font-bold text-indigo-600">Rp {{ number_format($book->price, 0, ',', '.') }}</span>
+                    @endif
+                    
                     @if($book->stock > 0)
                         <span class="px-3 py-1 bg-green-100 text-green-600 text-sm font-medium rounded-full">
                             Stok: {{ $book->stock }}
@@ -154,6 +234,101 @@
                 </div>
             </div>
         @endif
+
+        <!-- Reviews Section -->
+        <div id="reviews" class="mt-16">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-amber-50 to-orange-50">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                        <svg class="w-6 h-6 text-amber-500 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                        </svg>
+                        Ulasan Pembeli
+                    </h2>
+                </div>
+                
+                <div class="p-6">
+                    @if($book->review_count > 0)
+                        <!-- Rating Summary -->
+                        <div class="flex flex-col md:flex-row gap-8 mb-8 pb-8 border-b border-gray-100">
+                            <div class="text-center">
+                                <div class="text-5xl font-bold text-gray-800">{{ number_format($book->average_rating, 1) }}</div>
+                                <div class="flex justify-center text-amber-400 text-2xl mt-2">
+                                    @for($i = 1; $i <= 5; $i++)
+                                        @if($i <= round($book->average_rating))
+                                            <span>★</span>
+                                        @else
+                                            <span class="text-gray-300">★</span>
+                                        @endif
+                                    @endfor
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">{{ $book->review_count }} ulasan</p>
+                            </div>
+                            
+                            <!-- Rating Breakdown -->
+                            <div class="flex-1">
+                                @php $breakdown = $book->getRatingBreakdown(); @endphp
+                                @for($star = 5; $star >= 1; $star--)
+                                    @php 
+                                        $count = $breakdown[$star] ?? 0;
+                                        $percentage = $book->review_count > 0 ? ($count / $book->review_count) * 100 : 0;
+                                    @endphp
+                                    <div class="flex items-center gap-2 text-sm">
+                                        <span class="w-8 text-gray-600">{{ $star }} ★</span>
+                                        <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                            <div class="h-full bg-amber-400 rounded-full" style="width: {{ $percentage }}%"></div>
+                                        </div>
+                                        <span class="w-8 text-gray-500 text-right">{{ $count }}</span>
+                                    </div>
+                                @endfor
+                            </div>
+                        </div>
+                        
+                        <!-- Review List -->
+                        <div class="space-y-6">
+                            @foreach($book->reviews()->with('user')->latest()->take(10)->get() as $review)
+                                <div class="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-semibold text-gray-800">{{ $review->user->name }}</span>
+                                                @if($review->is_verified_purchase)
+                                                    <span class="px-2 py-0.5 bg-green-100 text-green-600 text-xs rounded-full flex items-center">
+                                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                                        </svg>
+                                                        Pembelian Terverifikasi
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <div class="flex items-center gap-2 mt-1">
+                                                <div class="flex text-amber-400 text-sm">
+                                                    @for($i = 1; $i <= 5; $i++)
+                                                        <span>{{ $i <= $review->rating ? '★' : '☆' }}</span>
+                                                    @endfor
+                                                </div>
+                                                <span class="text-xs text-gray-500">{{ $review->created_at->diffForHumans() }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @if($review->review)
+                                        <p class="text-gray-600">{{ $review->review }}</p>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-12">
+                            <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                            </svg>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">Belum Ada Ulasan</h3>
+                            <p class="text-gray-500">Jadilah yang pertama memberikan ulasan untuk buku ini!</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -171,5 +346,47 @@ function decrementQty() {
         input.value = parseInt(input.value) - 1;
     }
 }
+
+@auth
+@if(auth()->user()->isUser())
+function toggleWishlist(bookId, button) {
+    fetch(`/wishlist/toggle/${bookId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const svg = button.querySelector('svg');
+            if (data.in_wishlist) {
+                svg.classList.remove('text-gray-400', 'group-hover:text-red-400');
+                svg.classList.add('text-red-500', 'fill-current');
+                svg.setAttribute('fill', 'currentColor');
+                button.dataset.inWishlist = 'true';
+                button.title = 'Hapus dari Wishlist';
+            } else {
+                svg.classList.remove('text-red-500', 'fill-current');
+                svg.classList.add('text-gray-400', 'group-hover:text-red-400');
+                svg.setAttribute('fill', 'none');
+                button.dataset.inWishlist = 'false';
+                button.title = 'Tambah ke Wishlist';
+            }
+            
+            // Update wishlist count in nav if exists
+            const wishlistBadge = document.querySelector('.wishlist-badge');
+            if (wishlistBadge) {
+                wishlistBadge.textContent = data.wishlist_count;
+                wishlistBadge.style.display = data.wishlist_count > 0 ? 'flex' : 'none';
+            }
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+@endif
+@endauth
 </script>
 @endsection

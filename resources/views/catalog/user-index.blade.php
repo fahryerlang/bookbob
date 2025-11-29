@@ -66,7 +66,19 @@
             @if($books->count() > 0)
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     @foreach($books as $book)
-                        <div class="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden group">
+                        <div class="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden group relative">
+                            <!-- Wishlist Button -->
+                            <button type="button" 
+                                onclick="toggleWishlist({{ $book->id }}, this)"
+                                class="absolute top-3 right-3 z-10 w-9 h-9 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-all wishlist-btn"
+                                data-in-wishlist="{{ auth()->user()->hasInWishlist($book->id) ? 'true' : 'false' }}">
+                                <svg class="w-5 h-5 transition-colors {{ auth()->user()->hasInWishlist($book->id) ? 'text-red-500 fill-current' : 'text-gray-400' }}" 
+                                     fill="{{ auth()->user()->hasInWishlist($book->id) ? 'currentColor' : 'none' }}" 
+                                     stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                </svg>
+                            </button>
+
                             <a href="{{ route('catalog.show', $book->slug) }}">
                                 <div class="aspect-[3/4] bg-gray-100 relative overflow-hidden">
                                     @if($book->cover_image)
@@ -92,6 +104,23 @@
                                     <h3 class="font-semibold text-gray-800 mt-1 line-clamp-2 hover:text-indigo-600 transition">{{ $book->title }}</h3>
                                 </a>
                                 <p class="text-sm text-gray-500 mt-1">{{ $book->author }}</p>
+                                
+                                <!-- Rating -->
+                                @if($book->review_count > 0)
+                                    <div class="flex items-center gap-1 mt-2">
+                                        <div class="flex text-amber-400 text-sm">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                @if($i <= round($book->average_rating))
+                                                    <span>★</span>
+                                                @else
+                                                    <span class="text-gray-300">★</span>
+                                                @endif
+                                            @endfor
+                                        </div>
+                                        <span class="text-xs text-gray-500">({{ $book->review_count }})</span>
+                                    </div>
+                                @endif
+                                
                                 <div class="flex items-center justify-between mt-3">
                                     <span class="text-lg font-bold text-indigo-600">Rp {{ number_format($book->price, 0, ',', '.') }}</span>
                                     @if($book->stock > 0)
@@ -126,4 +155,42 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleWishlist(bookId, button) {
+    fetch(`/wishlist/toggle/${bookId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const svg = button.querySelector('svg');
+            if (data.in_wishlist) {
+                svg.classList.remove('text-gray-400');
+                svg.classList.add('text-red-500', 'fill-current');
+                svg.setAttribute('fill', 'currentColor');
+                button.dataset.inWishlist = 'true';
+            } else {
+                svg.classList.remove('text-red-500', 'fill-current');
+                svg.classList.add('text-gray-400');
+                svg.setAttribute('fill', 'none');
+                button.dataset.inWishlist = 'false';
+            }
+            
+            // Update wishlist count in sidebar if exists
+            const wishlistBadge = document.querySelector('.wishlist-badge');
+            if (wishlistBadge) {
+                wishlistBadge.textContent = data.wishlist_count;
+                wishlistBadge.style.display = data.wishlist_count > 0 ? 'flex' : 'none';
+            }
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
 @endsection

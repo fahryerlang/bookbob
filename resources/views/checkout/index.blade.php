@@ -3,11 +3,12 @@
 @section('title', 'Checkout')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-6" x-data="checkoutCoupon()">
     <h1 class="text-2xl font-bold text-gray-800">Checkout</h1>
 
     <form action="{{ route('checkout.store') }}" method="POST">
         @csrf
+        <input type="hidden" name="coupon_code" x-model="appliedCouponCode">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Shipping Info -->
                 <div class="lg:col-span-2 space-y-6">
@@ -43,6 +44,70 @@
                                     placeholder="Catatan tambahan untuk pesanan Anda">{{ old('notes') }}</textarea>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Coupon Section -->
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Kode Kupon</h2>
+                        
+                        <!-- Applied Coupon -->
+                        <div x-show="appliedCoupon" class="mb-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-green-800" x-text="appliedCoupon?.name"></p>
+                                        <p class="text-sm text-green-600">
+                                            Hemat <span x-text="formatRupiah(discountAmount)"></span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <button type="button" @click="removeCoupon()" class="text-red-500 hover:text-red-700">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Coupon Input -->
+                        <div x-show="!appliedCoupon">
+                            <div class="flex gap-2">
+                                <input type="text" x-model="couponCode" @keyup.enter.prevent="applyCoupon()"
+                                    class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent uppercase font-mono"
+                                    placeholder="Masukkan kode kupon">
+                                <button type="button" @click="applyCoupon()" :disabled="loading"
+                                    class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition disabled:opacity-50">
+                                    <span x-show="!loading">Terapkan</span>
+                                    <span x-show="loading">
+                                        <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25"></circle>
+                                            <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                            </div>
+                            <p x-show="errorMessage" x-text="errorMessage" class="mt-2 text-sm text-red-500"></p>
+                        </div>
+
+                        @if($isFirstPurchase)
+                        <!-- First Purchase Info -->
+                        <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                            <div class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-yellow-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-medium text-yellow-800">Ini adalah pembelian pertama Anda!</p>
+                                    <p class="text-xs text-yellow-600">Anda mungkin berhak mendapatkan kupon diskon pembelian pertama.</p>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
                     </div>
 
                     <div class="bg-white rounded-xl shadow p-6">
@@ -107,6 +172,10 @@
                                 <span class="text-gray-600">Subtotal</span>
                                 <span class="text-gray-800">Rp {{ number_format($total, 0, ',', '.') }}</span>
                             </div>
+                            <div x-show="discountAmount > 0" class="flex justify-between text-green-600">
+                                <span>Diskon Kupon</span>
+                                <span>- <span x-text="formatRupiah(discountAmount)"></span></span>
+                            </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Ongkos Kirim</span>
                                 <span class="text-green-600">Gratis</span>
@@ -114,7 +183,7 @@
                             <hr>
                             <div class="flex justify-between text-lg font-bold">
                                 <span class="text-gray-800">Total</span>
-                                <span class="text-indigo-600">Rp {{ number_format($total, 0, ',', '.') }}</span>
+                                <span class="text-indigo-600" x-text="formatRupiah(finalTotal)"></span>
                             </div>
                         </div>
 
@@ -130,4 +199,72 @@
             </div>
         </form>
 </div>
+
+<script>
+function checkoutCoupon() {
+    return {
+        subtotal: {{ $total }},
+        couponCode: '',
+        appliedCoupon: null,
+        appliedCouponCode: '',
+        discountAmount: 0,
+        finalTotal: {{ $total }},
+        loading: false,
+        errorMessage: '',
+
+        formatRupiah(amount) {
+            return 'Rp ' + new Intl.NumberFormat('id-ID').format(amount);
+        },
+
+        applyCoupon() {
+            if (!this.couponCode.trim()) {
+                this.errorMessage = 'Masukkan kode kupon';
+                return;
+            }
+
+            this.loading = true;
+            this.errorMessage = '';
+
+            fetch('{{ route("coupon.apply") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    code: this.couponCode,
+                    subtotal: this.subtotal
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                this.loading = false;
+                if (data.success) {
+                    this.appliedCoupon = data.coupon;
+                    this.appliedCouponCode = data.coupon.code;
+                    this.discountAmount = data.discount;
+                    this.finalTotal = this.subtotal - this.discountAmount;
+                    this.couponCode = '';
+                } else {
+                    this.errorMessage = data.message;
+                }
+            })
+            .catch(error => {
+                this.loading = false;
+                this.errorMessage = 'Terjadi kesalahan. Silakan coba lagi.';
+            });
+        },
+
+        removeCoupon() {
+            this.appliedCoupon = null;
+            this.appliedCouponCode = '';
+            this.discountAmount = 0;
+            this.finalTotal = this.subtotal;
+            this.couponCode = '';
+            this.errorMessage = '';
+        }
+    }
+}
+</script>
 @endsection

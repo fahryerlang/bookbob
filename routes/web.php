@@ -9,6 +9,9 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\CouponController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\BookController as AdminBookController;
@@ -16,6 +19,8 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\MessageController as AdminMessageController;
 use App\Http\Controllers\Admin\WalletController as AdminWalletController;
+use App\Http\Controllers\Admin\PromoController as AdminPromoController;
+use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use Illuminate\Support\Facades\Route;
 
 // Landing Page
@@ -68,6 +73,25 @@ Route::middleware(['auth', 'user'])->group(function () {
     Route::get('/wallet/topup/gateway', [WalletController::class, 'topupGateway'])->name('wallet.topup.gateway');
     Route::get('/wallet/history', [WalletController::class, 'history'])->name('wallet.history');
     Route::get('/wallet/topup/{topupRequest}', [WalletController::class, 'showTopup'])->name('wallet.topup.show');
+
+    // Wishlist
+    Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
+    Route::post('/wishlist/toggle/{book}', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
+    Route::delete('/wishlist/{wishlist}', [WishlistController::class, 'remove'])->name('wishlist.remove');
+    Route::post('/wishlist/{wishlist}/move-to-cart', [WishlistController::class, 'moveToCart'])->name('wishlist.moveToCart');
+    Route::post('/wishlist/move-all-to-cart', [WishlistController::class, 'moveAllToCart'])->name('wishlist.moveAllToCart');
+    Route::delete('/wishlist', [WishlistController::class, 'clear'])->name('wishlist.clear');
+
+    // Reviews
+    Route::get('/orders/{order}/review/{book}', [ReviewController::class, 'create'])->name('reviews.create');
+    Route::post('/orders/{order}/review/{book}', [ReviewController::class, 'store'])->name('reviews.store');
+    Route::put('/reviews/{review}', [ReviewController::class, 'update'])->name('reviews.update');
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+
+    // Coupons
+    Route::post('/coupon/apply', [CouponController::class, 'apply'])->name('coupon.apply');
+    Route::post('/coupon/remove', [CouponController::class, 'remove'])->name('coupon.remove');
+    Route::get('/coupon/check-first-purchase', [CouponController::class, 'checkFirstPurchase'])->name('coupon.checkFirstPurchase');
 });
 
 // Admin Routes
@@ -109,6 +133,25 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/wallet/bank-accounts', [AdminWalletController::class, 'storeBankAccount'])->name('wallet.bank-accounts.store');
     Route::put('/wallet/bank-accounts/{bankAccount}', [AdminWalletController::class, 'updateBankAccount'])->name('wallet.bank-accounts.update');
     Route::delete('/wallet/bank-accounts/{bankAccount}', [AdminWalletController::class, 'deleteBankAccount'])->name('wallet.bank-accounts.delete');
+
+    // Promos
+    Route::get('/promos', [AdminPromoController::class, 'index'])->name('promos.index');
+    Route::get('/promos/create', [AdminPromoController::class, 'create'])->name('promos.create');
+    Route::post('/promos', [AdminPromoController::class, 'store'])->name('promos.store');
+    Route::get('/promos/{promo}/edit', [AdminPromoController::class, 'edit'])->name('promos.edit');
+    Route::put('/promos/{promo}', [AdminPromoController::class, 'update'])->name('promos.update');
+    Route::delete('/promos/{promo}', [AdminPromoController::class, 'destroy'])->name('promos.destroy');
+    Route::patch('/promos/{promo}/toggle', [AdminPromoController::class, 'toggle'])->name('promos.toggle');
+
+    // Coupons
+    Route::get('/coupons', [AdminCouponController::class, 'index'])->name('coupons.index');
+    Route::get('/coupons/create', [AdminCouponController::class, 'create'])->name('coupons.create');
+    Route::post('/coupons', [AdminCouponController::class, 'store'])->name('coupons.store');
+    Route::get('/coupons/{coupon}/edit', [AdminCouponController::class, 'edit'])->name('coupons.edit');
+    Route::put('/coupons/{coupon}', [AdminCouponController::class, 'update'])->name('coupons.update');
+    Route::delete('/coupons/{coupon}', [AdminCouponController::class, 'destroy'])->name('coupons.destroy');
+    Route::patch('/coupons/{coupon}/toggle', [AdminCouponController::class, 'toggle'])->name('coupons.toggle');
+    Route::get('/coupons/generate-code', [AdminCouponController::class, 'generateCode'])->name('coupons.generateCode');
 });
 
 Route::middleware('auth')->group(function () {

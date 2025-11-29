@@ -66,17 +66,33 @@ class CartController extends Controller
 
         $cart->update($validated);
 
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Keranjang berhasil diperbarui!',
+                'quantity' => $cart->quantity,
+                'subtotal' => $cart->quantity * $cart->book->price,
+            ]);
+        }
+
         return redirect()->back()
             ->with('success', 'Keranjang berhasil diperbarui!');
     }
 
-    public function remove(Cart $cart)
+    public function remove(Request $request, Cart $cart)
     {
         if ($cart->user_id !== auth()->id()) {
             abort(403);
         }
 
         $cart->delete();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Buku berhasil dihapus dari keranjang!',
+            ]);
+        }
 
         return redirect()->back()
             ->with('success', 'Buku berhasil dihapus dari keranjang!');
